@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:sqs="http://www.mulesoft.org/schema/mule/sqs" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sqs http://www.mulesoft.org/schema/mule/sqs/current/mule-sqs.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+	<sqs:config name="Amazon_SQS_Configuration" doc:name="Amazon SQS Configuration" doc:id="19b78e8d-9e1e-483b-ba1b-eb8d900aa8e7" defaultQueueUrl="${secure::defaultQueueUrl}" >
+		<sqs:basic-connection testQueueArn="${secure::testQueueArn}" accessKey="${secure::accessKey}" secretKey="${secure::secretKey}" region="${secure::region}" />
+	</sqs:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="c50cb722-8205-46f4-b0bc-edf8eab460ab" file="application.properties" />
+	<secure-properties:config name="Secure_Properties_Config1" doc:name="Secure Properties Config" doc:id="4b40563d-69b5-49a5-92e1-037539a38fb7" file="application.properties" key="mule" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<flow name="createQueue" doc:id="ba41a3c2-4653-4a89-be31-a5a9f47bab39" >
+		<http:listener doc:name="Listener" doc:id="5a76a7ad-f053-4cc6-a138-f413d39a14e2" config-ref="Domain_HTTP_Listener_config" path="/createQ"/>
+		<sqs:create-queue doc:name="Create queue" doc:id="642aa2c3-1132-499b-b99c-b0d196eec982" config-ref="Amazon_SQS_Configuration" queueName="testQueue1"/>
+		<logger level="INFO" doc:name="Logger" doc:id="3f5501c2-d7e8-4c14-acfa-2452c3aaa5d5" message="#[payload]"/>
+	</flow>
+	<flow name="sendMsg" doc:id="96daff6d-f045-440f-be41-55d3bda5c654" >
+		<http:listener doc:name="Listener" doc:id="c8db7ffa-8d0a-4eff-b7be-b12f594ded4c" config-ref="Domain_HTTP_Listener_config" path="/sendmsg" allowedMethods="POST"/>
+		<set-variable value='#[%dw 2.0
+output application/java
+---
+{
+	delaySeconds: 0,
+	body: "Hello World ..Jai Shri Ram",
+	messageAttributes: {
+		"AccountId": {
+			"stringValue" : "000123456",
+			"dataType" : "String.AccountId"
+		} as Object {
+			class: "org.mule.extension.sqs.api.model.MessageAttributeValue"
+		},
+		"NumberId": {
+			"stringValue" : "230.000000000000000001",
+			"dataType" : "Number"
+		} as Object {
+			class : "org.mule.extension.sqs.api.model.MessageAttributeValue"
+		}
+	} as Object {
+		class: "java.util.HashMap"
+	}
+} as Object {
+	class: "org.mule.extension.sqs.api.model.Message"
+}]' doc:name="Set Variable" doc:id="05d1d8d3-6906-4d40-aedb-26d23855b5f4" variableName="message"/>
+		<sqs:send-message doc:name="Send message" doc:id="e2ffa531-edd5-449d-8c79-a5d808a3eff2" config-ref="Amazon_SQS_Configuration" queueUrl="#[payload.Qurl]">
+			<sqs:message ><![CDATA[#[vars.message]]]></sqs:message>
+		</sqs:send-message>
+		<logger level="INFO" doc:name="Logger" doc:id="fbd13572-a3c4-41db-b790-8deca4c6bd16" message="Message sent: #[vars.message]"/>
+	</flow>
+	<flow name="rcvMsg" doc:id="37ec27f4-e2b6-4bea-aafb-f69dec4e9a7f" >
+		<sqs:receivemessages doc:name="Receive messages" doc:id="e0658760-260f-47f9-a1e5-255e79ea4efd" config-ref="Amazon_SQS_Configuration" queueUrl="https://sqs.ap-south-1.amazonaws.com/960096286456/testQueue1"/>
+		<logger level="INFO" doc:name="Logger" doc:id="90e735a1-5a10-4fef-9efa-f5c9e05e7408" message="#[payload]"/>
+	</flow>
+	<flow name="listQueues" doc:id="ed66b837-71fe-4893-baed-81fe0f96a3f6" >
+		<http:listener doc:name="Listener" doc:id="2311800f-206b-485e-928f-5a1116e6c324" config-ref="Domain_HTTP_Listener_config" path="/listQ"/>
+		<sqs:list-queues doc:name="List queues" doc:id="e2f6ae90-ef36-42c8-886b-40ff22bf215d" config-ref="Amazon_SQS_Configuration" queueNamePrefix="test"/>
+		<logger level="INFO" doc:name="Logger" doc:id="634ca3e5-db42-42f7-89fc-5c30a07068b3" message="#[payload]"/>
+	</flow>
+	<flow name="deleteQueue" doc:id="023a4d16-73ab-4fc9-a5d9-15b5af0282f5" >
+		<http:listener doc:name="Listener" doc:id="a5fead85-390d-433b-8f09-4863822c0d96" config-ref="Domain_HTTP_Listener_config" path="/deleteQ"/>
+		<sqs:get-queue-url doc:name="Get queue url" doc:id="7cba72eb-7776-4cf6-aa53-e289c3c6be50" config-ref="Amazon_SQS_Configuration" queueName="testQueue1" queueOwnerAWSAccountId="960096286456"/>
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="806a99e7-da8b-423c-b283-b5942d0f5a16" variableName="QueueURL"/>
+		<sqs:get-approximate-number-of-messages doc:name="Get approximate number of messages" doc:id="e8cec977-9105-486d-ae57-c31f0d24d2e4" config-ref="Amazon_SQS_Configuration" queueUrl="#[vars.QueueURL]" target="NoOfMsgs"/>
+		<choice doc:name="Choice" doc:id="8c555eb7-aefd-44ef-a3f6-db1e34493e59" >
+			<when expression="#[vars.NoOfMsgs &gt; 0]">
+				<logger level="INFO" doc:name="Logger" doc:id="60d16459-f798-48f5-bb41-9a2137f477a5" message='#["Purging needs to be done."]' />
+				<sqs:purge-queue doc:name="Purge queue" doc:id="ef1fe648-0b07-46d5-a68f-1701e7f90b3a" config-ref="Amazon_SQS_Configuration" queueUrl="#[vars.QueueURL]" />
+				<logger level="INFO" doc:name="Logger" doc:id="41c9e11b-f306-480e-9875-44f837a3ea18" message='#["Purging completed.."]'/>
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="Logger" doc:id="774ae1e4-802a-4cea-b338-ff5b8cd84980" message='#["Go for deletion as there are no pending messages."]' />
+			</otherwise>
+		</choice>
+		<sqs:delete-queue doc:name="Delete queue" doc:id="dab98f02-036e-4d1c-b98f-1be73963d289" config-ref="Amazon_SQS_Configuration" queueUrl="#[vars.QueueURL]"/>
+		<logger level="INFO" doc:name="Logger" doc:id="f11b1f5e-ffdb-420e-bb0d-7c720582bbec" message='#["SQS Queue deleted.."]'/>
+	</flow>
+</mule>
