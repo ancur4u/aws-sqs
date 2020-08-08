@@ -11,7 +11,7 @@ http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/sc
 		<sqs:basic-connection testQueueArn="${secure::testQueueArn}" accessKey="${secure::accessKey}" secretKey="${secure::secretKey}" region="${secure::region}" />
 	</sqs:config>
 	<configuration-properties doc:name="Configuration properties" doc:id="c50cb722-8205-46f4-b0bc-edf8eab460ab" file="application.properties" />
-	<secure-properties:config name="Secure_Properties_Config1" doc:name="Secure Properties Config" doc:id="4b40563d-69b5-49a5-92e1-037539a38fb7" file="application.properties" key="mule" >
+	<secure-properties:config name="Secure_Properties_Config1" doc:name="Secure Properties Config" doc:id="4b40563d-69b5-49a5-92e1-037539a38fb7" file="application.properties" key="****" >
 		<secure-properties:encrypt algorithm="Blowfish" />
 	</secure-properties:config>
 	<flow name="createQueue" doc:id="ba41a3c2-4653-4a89-be31-a5a9f47bab39" >
